@@ -10,13 +10,24 @@ class RTDBService {
   }
 
   static Future<List<Post>> getPosts(String id) async {
-    List<Post> items = [];
     Query _query = _database.child("posts").orderByChild("userId").equalTo(id);
     var event = await _query.once();
     var result = event.snapshot.children;
-    for(var item in result) {
-      items.add(Post.fromJson(Map<String, dynamic>.from(item.value as Map)));
-    }
+    List<Post> items = result.map((snapshot) {
+      Map<String, dynamic> post = Map<String, dynamic>.from(snapshot.value as Map);
+      post['key'] = snapshot.key;
+      return Post.fromJson(post);
+    }).toList();
     return items;
+  }
+
+  static Future<Stream<DatabaseEvent>> update(Post post) async {
+    _database.child("posts").child(post.key.toString()).update(post.toJson());
+    return _database.onChildChanged;
+  }
+
+  static Future<Stream<DatabaseEvent>> delete(String key) async {
+    _database.child("posts").child(key).remove();
+    return _database.onChildRemoved;
   }
 }

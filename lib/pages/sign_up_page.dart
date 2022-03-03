@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:herewego/pages/sign_in_page.dart';
 import 'package:herewego/services/auth_service.dart';
 
-import 'home_page.dart';
-
 class SignUpPage extends StatefulWidget {
   static const String id = "sign_up_page";
 

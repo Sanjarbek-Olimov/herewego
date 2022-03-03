@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:herewego/pages/sign_in_page.dart';
+import 'package:herewego/pages/sign_up_page.dart';
 
 import 'hive_service.dart';
 
@@ -13,7 +14,6 @@ class AuthService {
     try {
       UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(email: email, password: password);
-      print(userCredential.user.toString());
      await userCredential.user!.updateDisplayName(name);
       return userCredential.user;
     } on FirebaseAuthException catch (e) {
@@ -57,5 +57,19 @@ class AuthService {
     await _auth.signOut();
     HiveDB.removeUid();
     Navigator.pushReplacementNamed(context, SignInPage.id);
+  }
+
+  static void deleteAccount(BuildContext context) async {
+    try {
+      _auth.currentUser!.delete();
+      HiveDB.removeUid();
+      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const SignUpPage()), (route) => false);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'The user must re-authenticate before this operation can be executed.')));
+      }
+    }
   }
 }
