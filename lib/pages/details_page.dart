@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:herewego/model/post_model.dart';
@@ -118,6 +119,35 @@ class _DetailPageState extends State<DetailPage> {
     }
   }
 
+  void _androidDialog() {
+    showDialog(context: context, builder: (context) {
+      return AlertDialog(
+        title: const Text("Delete image"),
+        content: const Text("Are you sure to delete the image?"),
+        actions: [
+          TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Cancel", style: TextStyle(color: Colors.red, fontSize: 16),)),
+          TextButton(onPressed: () {
+            setState(() {
+              if (widget.post!.image != null) {
+                FirebaseStorage.instance.refFromURL(
+                    widget.post!.image!).delete();
+              } else if (image != null) {
+                image!.delete();
+              }
+              widget.post!.image = null;
+              Navigator.pop(context);
+            });
+          }, child: const Text("Confirm", style: TextStyle(fontSize: 16),)),
+        ],
+
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -146,6 +176,11 @@ class _DetailPageState extends State<DetailPage> {
                 children: [
                   InkWell(
                     onTap: _getImage,
+                    onLongPress: () {
+                      if (widget.post!.image != null || image != null) {
+                        _androidDialog();
+                      }
+                    },
                     child: SizedBox(
                       height: 100,
                       width: 100,
