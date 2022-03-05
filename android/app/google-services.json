@@ -1,33 +1,34 @@
 {
   "project_info": {
-    "project_number": "991943442312",
-    "project_id": "herewego-ff1fe",
-    "storage_bucket": "herewego-ff1fe.appspot.com"
+    "project_number": "946817034114",
+    "firebase_url": "https://herewego-811b1-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "herewego-811b1",
+    "storage_bucket": "herewego-811b1.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:991943442312:android:4a5007b97d5cf3703e443d",
+        "mobilesdk_app_id": "1:946817034114:android:e08bff462e90913617119b",
         "android_client_info": {
           "package_name": "com.example.herewego"
         }
       },
       "oauth_client": [
         {
-          "client_id": "991943442312-piudcskuhcfc8j3puo0elch72kefmu6t.apps.googleusercontent.com",
+          "client_id": "946817034114-rqb79onqjtkcvjke3if39nlhsmhs4uq5.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAyHyT86lLdaYCpFGn5sLTd1jORRyPCk2g"
+          "current_key": "AIzaSyCxHZ3nNFhNRqG72PolkiQGndEL8Eb6coA"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "991943442312-piudcskuhcfc8j3puo0elch72kefmu6t.apps.googleusercontent.com",
+              "client_id": "946817034114-rqb79onqjtkcvjke3if39nlhsmhs4uq5.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

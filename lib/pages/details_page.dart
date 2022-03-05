@@ -1,13 +1,15 @@
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:herewego/model/post_model.dart';
 import 'package:herewego/services/database_service.dart';
 import 'package:herewego/services/hive_service.dart';
 import 'package:herewego/services/store_service.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:herewego/widgets/video_player.dart';
+import 'package:herewego/widgets/video_player_post.dart';
 import 'package:intl/intl.dart';
+import 'package:video_player/video_player.dart';
 
 class DetailPage extends StatefulWidget {
   static const String id = "detail_page";
@@ -21,8 +23,8 @@ class DetailPage extends StatefulWidget {
 
 class _DetailPageState extends State<DetailPage> {
   var isLoading = false;
-  File? image;
-  final picker = ImagePicker();
+  File? file;
+  String? thumbnail;
   var firstNameController = TextEditingController();
   var lastNameController = TextEditingController();
   var dateController = TextEditingController();
@@ -45,14 +47,14 @@ class _DetailPageState extends State<DetailPage> {
       isLoading = true;
     });
     if (widget.post != null) {
-      image != null ?
-      StoreService.uploadImage(image).then((image) =>
+      file != null ?
+      StoreService.uploadFile(file).then((image) =>
       {
         _apiUpdatePost(name, date, content, image)
       }) : _apiUpdatePost(name, date, content, widget.post!.image);
     }
     else {
-      StoreService.uploadImage(image).then((image) =>
+      StoreService.uploadFile(file).then((image) =>
       {
         _apiAddPost(name, date, content, image)
       });
@@ -65,7 +67,8 @@ class _DetailPageState extends State<DetailPage> {
         name: name,
         content: content,
         date: date,
-        image: image)).then((response) =>
+        image: image,
+        isVideo: file!.path.endsWith("mp4") ? true : false)).then((response) =>
     {
       _respAddPost(),
     });
@@ -74,12 +77,15 @@ class _DetailPageState extends State<DetailPage> {
   _apiUpdatePost(String name, DateTime date, String content,
       String? image) async {
     RTDBService.update(
-        Post(userId: widget.post!.userId,
+        Post(
+            userId: widget.post!.userId,
             key: widget.post!.key,
             name: name,
             date: date,
             content: content,
-            image: image)).then((response) =>
+            image: image,
+            isVideo: file!.path.endsWith("mp4") ? true : false)).then((
+        response) =>
     {
       _respAddPost(),
     });
@@ -93,17 +99,23 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   Future _getImage() async {
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+        allowMultiple: false,
+        type: FileType.custom,
+        allowedExtensions: ['jpeg', 'jpg', 'png', 'mp4', 'gif']);
     setState(() {
-      if (pickedFile != null) {
-        image = File(pickedFile.path);
+      if (result != null && (result.files[0].extension == "jpeg" ||
+          result.files[0].extension == "jpg" ||
+          result.files[0].extension == "png" ||
+          result.files[0].extension == "mp4" ||
+          result.files[0].extension == "gif")) {
+        file = File(result.files.single.path!);
       } else {
-        if (kDebugMode) {
-          print('No image selected.');
-        }
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("You can select only image or video file!")));
       }
     });
   }
+
 
   @override
   void initState() {
@@ -119,35 +131,6 @@ class _DetailPageState extends State<DetailPage> {
     }
   }
 
-  void _androidDialog() {
-    showDialog(context: context, builder: (context) {
-      return AlertDialog(
-        title: const Text("Delete image"),
-        content: const Text("Are you sure to delete the image?"),
-        actions: [
-          TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("Cancel", style: TextStyle(color: Colors.red, fontSize: 16),)),
-          TextButton(onPressed: () {
-            setState(() {
-              if (widget.post!.image != null) {
-                FirebaseStorage.instance.refFromURL(
-                    widget.post!.image!).delete();
-              } else if (image != null) {
-                image!.delete();
-              }
-              widget.post!.image = null;
-              Navigator.pop(context);
-            });
-          }, child: const Text("Confirm", style: TextStyle(fontSize: 16),)),
-        ],
-
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -156,150 +139,166 @@ class _DetailPageState extends State<DetailPage> {
         title: Text(widget.post != null ? "Update Post" : "Add Post"),
         centerTitle: true,
       ),
-      body: Stack(
-        children: [
-          isLoading
-              ? const Center(
-            child: CircularProgressIndicator.adaptive(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
-            ),
-          )
-              : const SizedBox.shrink(),
-          SingleChildScrollView(
-            child: Container(
+      body: WillPopScope(
+        onWillPop: () async {
+          _respAddPost();
+          return false;
+        },
+        child: Stack(
+          children: [
+            isLoading
+                ? Container(
+              padding: const EdgeInsets.all(10),
               height: MediaQuery
                   .of(context)
                   .size
                   .height,
-              padding: const EdgeInsets.all(30),
-              child: Column(
-                children: [
-                  InkWell(
-                    onTap: _getImage,
-                    onLongPress: () {
-                      if (widget.post!.image != null || image != null) {
-                        _androidDialog();
-                      }
-                    },
-                    child: SizedBox(
-                      height: 100,
-                      width: 100,
-                      child: image != null ?
-                      Image.file(image!, fit: BoxFit.cover)
-                          : widget.post == null || widget.post!.image == null
-                          ? Image.asset(
-                          "assets/images/image_detail.jpg")
-                          : Image.network(
-                        widget.post!.image!, fit: BoxFit.cover,),
-                    ),
-                  ),
-                  TextField(
-                    textInputAction: TextInputAction.next,
-                    controller: firstNameController,
-                    decoration: const InputDecoration(
-                      focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Colors.red, width: 2
-                          )
+              width: MediaQuery
+                  .of(context)
+                  .size
+                  .width,
+              alignment: Alignment.bottomCenter,
+              child: const CircularProgressIndicator.adaptive(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+              ),
+            )
+                : const SizedBox.shrink(),
+            SingleChildScrollView(
+              child: Container(
+                height: MediaQuery
+                    .of(context)
+                    .size
+                    .height,
+                padding: const EdgeInsets.all(30),
+                child: Column(
+                  children: [
+                    InkWell(
+                      onTap: _getImage,
+                      child: SizedBox(
+                        height: 100,
+                        width: 100,
+                        child: file != null && file!.path.endsWith("mp4") ?
+                        VideoPlayerWidget(file: file!) : widget.post != null && widget.post!.isVideo
+                            ? VideoPlayerPost(file: widget.post!.image!)
+                            : file != null ?
+                        Image.file(file!, fit: BoxFit.cover)
+                            : widget.post == null || widget.post!.image == null
+                            ? Image.asset(
+                            "assets/images/image_detail.jpg")
+                            : Image.network(
+                          widget.post!.image!, fit: BoxFit.cover),
                       ),
-                      hintText: "First Name",
                     ),
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  TextField(
-                    textInputAction: TextInputAction.next,
-                    controller: lastNameController,
-                    decoration: const InputDecoration(
-                      focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Colors.red, width: 2
-                          )
-                      ),
-                      hintText: "Last Name",
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  TextField(
-                    textInputAction: TextInputAction.next,
-                    controller: contentController,
-                    decoration: const InputDecoration(
-                      focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Colors.red, width: 2
-                          )
-                      ),
-                      hintText: "Content",
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  TextField(
-                    controller: dateController,
-                    decoration: const InputDecoration(
-                      focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                              color: Colors.red, width: 2
-                          )
-                      ),
-                      hintText: "Date",
-                    ),
-                    readOnly: true,
-                    onTap: () async {
-                      DateTime? pickedDate = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime(1900),
-                          lastDate: DateTime(2100),
-                          builder: (context, child) {
-                            return Theme(
-                              data: Theme.of(context).copyWith(
-                                colorScheme: const ColorScheme.light(
-                                  primary: Colors.red, // body text color
-                                ),
-                                textButtonTheme: TextButtonThemeData(
-                                  style: TextButton.styleFrom(
-                                    primary: Colors.red, // button text color
-                                  ),
-                                ),
-                              ), child: child!,
+                    TextField(
+                      textInputAction: TextInputAction.next,
+                      controller: firstNameController,
+                      decoration: const InputDecoration(
+                        focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Colors.red, width: 2
                             )
-                          }
-                      );
-                      if (pickedDate != null) {
-                        String formattedDate =
-                        DateFormat('yyyy-MM-dd').format(pickedDate);
-                        setState(() {
-                          dateController.text = formattedDate;
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 45,
-                    child: MaterialButton(
-                      onPressed: _addPost,
-                      color: Colors.red,
-                      child: Text(
-                        widget.post != null ? "Update" : "Add",
-                        style: const TextStyle(color: Colors.white),
+                        ),
+                        hintText: "First Name",
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(
+                      height: 15,
+                    ),
+                    TextField(
+                      textInputAction: TextInputAction.next,
+                      controller: lastNameController,
+                      decoration: const InputDecoration(
+                        focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Colors.red, width: 2
+                            )
+                        ),
+                        hintText: "Last Name",
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 15,
+                    ),
+                    TextField(
+                      textInputAction: TextInputAction.next,
+                      controller: contentController,
+                      decoration: const InputDecoration(
+                        focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Colors.red, width: 2
+                            )
+                        ),
+                        hintText: "Content",
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 15,
+                    ),
+                    TextField(
+                      controller: dateController,
+                      decoration: const InputDecoration(
+                        focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Colors.red, width: 2
+                            )
+                        ),
+                        hintText: "Date",
+                      ),
+                      readOnly: true,
+                      onTap: () async {
+                        DateTime? pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(1900),
+                            lastDate: DateTime(2100),
+                            builder: (context, child) {
+                              return Theme(
+                                data: Theme.of(context).copyWith(
+                                  colorScheme: const ColorScheme.light(
+                                    primary: Colors.red, // body text color
+                                  ),
+                                  textButtonTheme: TextButtonThemeData(
+                                    style: TextButton.styleFrom(
+                                      primary: Colors.red, // button text color
+                                    ),
+                                  ),
+                                ), child: child!,
+                              )
+                            }
+                        );
+                        if (pickedDate != null) {
+                          String formattedDate =
+                          DateFormat('yyyy-MM-dd').format(pickedDate);
+                          setState(() {
+                            dateController.text = formattedDate;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(
+                      height: 15,
+                    ),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 45,
+                      child: MaterialButton(
+                        onPressed: _addPost,
+                        color: Colors.red,
+                        child: Text(
+                          widget.post != null ? "Update" : "Add",
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
+
+

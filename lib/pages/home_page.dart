@@ -1,10 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:herewego/model/post_model.dart';
 import 'package:herewego/pages/view_image.dart';
 import 'package:herewego/services/auth_service.dart';
 import 'package:herewego/services/database_service.dart';
 import 'package:herewego/services/hive_service.dart';
+import 'package:herewego/widgets/video_player_post.dart';
+import 'package:video_player/video_player.dart';
 
 import 'account_settings.dart';
 import 'details_page.dart';
@@ -151,6 +154,9 @@ class _HomePageState extends State<HomePage> {
         RTDBService.delete(post.key!);
         setState(() {
           items.remove(post);
+          if (post.image != null) {
+            FirebaseStorage.instance.refFromURL(post.image!).delete();
+          }
         });
       },
       background: Container(
@@ -167,41 +173,35 @@ class _HomePageState extends State<HomePage> {
         },
         onLongPress: () {
           if (post.image != null) {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        ViewImage(url: post.image!)));
+            Navigator.push(context,
+                MaterialPageRoute(builder: (context) => ViewImage(post: post)));
           }
         },
         child: Container(
           padding: const EdgeInsets.all(20),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              post.image == null
-                  ? Image.asset(
-                      "assets/images/image_default.png",
-                      height: 200,
-                      fit: BoxFit.cover,
-                    )
-                  : Image.network(
-                      post.image!,
-                      height: 200,
-                      fit: BoxFit.cover,
-                    ),
+              Container(
+                height: 200,
+                width: MediaQuery.of(context).size.width,
+                child: post.image == null
+                    ? Image.asset(
+                        "assets/images/image_default.png",
+                        fit: BoxFit.cover,
+                      )
+                    : post.isVideo
+                        ? VideoPlayerPost(file: post.image!)
+                        : Image.network(
+                            post.image!,
+                            fit: BoxFit.cover,
+                          ),
+              ),
               const SizedBox(
                 height: 5,
               ),
               Text(
                 post.name,
-                style: const TextStyle(color: Colors.black, fontSize: 20),
-              ),
-              const SizedBox(
-                height: 5,
-              ),
-              Text(
-                post.date.toString().substring(0, 10),
                 style: const TextStyle(color: Colors.black, fontSize: 16),
               ),
               const SizedBox(
@@ -209,6 +209,13 @@ class _HomePageState extends State<HomePage> {
               ),
               Text(
                 post.content,
+                style: const TextStyle(color: Colors.black, fontSize: 20),
+              ),
+              const SizedBox(
+                height: 5,
+              ),
+              Text(
+                post.date.toString().substring(0, 10),
                 style: const TextStyle(color: Colors.black, fontSize: 16),
               ),
             ],

@@ -5,7 +5,6 @@ import 'package:herewego/pages/account_settings.dart';
 import 'package:herewego/pages/home_page.dart';
 import 'package:herewego/pages/sign_in_page.dart';
 import 'package:herewego/pages/sign_up_page.dart';
-import 'package:herewego/services/auth_service.dart';
 import 'package:herewego/services/hive_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 

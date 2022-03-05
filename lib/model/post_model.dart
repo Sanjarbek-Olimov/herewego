@@ -5,8 +5,9 @@ class Post {
   DateTime date;
   String content;
   String? image;
+  bool isVideo;
 
-  Post({required this.userId, required this.name, required this.date, required this.content, this.image, this.key});
+  Post({required this.userId, required this.name, required this.date, required this.content, this.image, this.key, required this.isVideo});
 
   Post.fromJson(Map<String, dynamic> json)
       : userId = json['userId'],
@@ -14,6 +15,7 @@ class Post {
         date = DateTime.parse(json['date']),
         content = json['content'],
         key = json['key'],
+        isVideo = json['isVideo'],
         image = json['image'];
 
   Map<String, dynamic> toJson() => {
@@ -21,6 +23,7 @@ class Post {
         'name': name,
         'date': date.toString(),
         'content': content,
-        'image': image
+        'image': image,
+        'isVideo': isVideo,
       };
 }
